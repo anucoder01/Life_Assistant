@@ -1,0 +1,39 @@
+# requirements.txt
+# ============================================================
+# ALL PYTHON DEPENDENCIES
+#
+# Install all at once with:
+#   pip install -r requirements.txt
+#
+# Notes:
+# - face_recognition requires cmake and dlib (see README for setup)
+# - chromadb may take a moment to download its dependencies
+# - sentence-transformers downloads ~90MB model on first use
+# ============================================================
+
+# ── Face Recognition ──────────────────────────────────────
+# face_recognition wraps dlib's deep learning face detection
+face_recognition==1.3.0
+opencv-python==4.9.0.80          # Webcam access + image processing
+
+# ── Embedding Model ───────────────────────────────────────
+# Runs locally, no API needed
+sentence-transformers==2.7.0
+
+# ── Vector Database ───────────────────────────────────────
+chromadb==0.5.0                  # Local persistent vector DB
+
+# ── LLM API ───────────────────────────────────────────────
+google-generativeai==0.7.2          # Free Gemini API
+
+# ── PDF Processing ────────────────────────────────────────
+PyMuPDF==1.24.2                  # fitz - fast PDF text extraction
+
+# ── Web Framework ─────────────────────────────────────────
+fastapi==0.111.0                 # REST API framework
+uvicorn[standard]==0.29.0        # ASGI server for FastAPI
+python-multipart==0.0.9          # For file upload handling
+
+# ── Data & Utilities ──────────────────────────────────────
+numpy==1.26.4                    # Arrays (face encodings, embeddings)
+pydantic==2.7.0                  # Data validation (used by FastAPI)

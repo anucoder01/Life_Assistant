@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life Assistant</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --bg:#0d0f14; --surface:#141720; --surface2:#1c2030;
+    --border:#252a3a; --accent:#4f9eff; --accent2:#7b5ef8;
+    --success:#3ecf8e; --danger:#ef4444; --warn:#f59e0b;
+    --text:#e2e8f0; --muted:#64748b;
+    --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+  /* ── Auth Screen ── */
+  #auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:24px;}
+  .auth-logo{font-family:var(--mono);font-size:12px;letter-spacing:4px;color:var(--muted);text-transform:uppercase;}
+  .auth-title{font-size:32px;font-weight:300;letter-spacing:-1px;text-align:center;}
+  .auth-title span{color:var(--accent);}
+
+  /* Video container */
+  .video-container{position:relative;width:320px;height:240px;border-radius:16px;overflow:hidden;border:2px solid var(--border);background:#000;}
+  #auth-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
+  #auth-canvas{display:none;}
+  .video-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+  .face-guide{width:160px;height:200px;border:2px solid rgba(79,158,255,0.5);border-radius:50%;position:relative;}
+  .face-guide::before,.face-guide::after{content:'';position:absolute;border:2px solid var(--accent);border-radius:4px;}
+  .face-guide::before{top:-4px;left:20px;right:20px;height:0;}
+  .face-guide::after{bottom:-4px;left:20px;right:20px;height:0;}
+  .scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scanDown 2s ease-in-out infinite;}
+  @keyframes scanDown{0%{top:0;opacity:0}20%{opacity:1}80%{opacity:1}100%{top:100%;opacity:0}}
+  .video-status{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.7);}
+
+  /* Auth progress */
+  .capture-progress{width:320px;}
+  .progress-bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width 0.3s ease;width:0%;}
+  .progress-label{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px;text-align:center;}
+
+  .auth-btn{background:var(--accent);color:#fff;border:none;padding:12px 36px;border-radius:8px;font-family:var(--sans);font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;width:320px;}
+  .auth-btn:hover{background:#3b8fef;transform:translateY(-1px);}
+  .auth-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+  .auth-btn.success{background:var(--success);}
+  .auth-btn.danger{background:var(--danger);}
+
+  .auth-status{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;min-height:18px;}
+  .auth-status.success{color:var(--success);}
+  .auth-status.error{color:var(--danger);}
+  .auth-status.warn{color:var(--warn);}
+
+  .auth-links{display:flex;gap:20px;font-size:12px;}
+  .auth-link{color:var(--muted);cursor:pointer;text-decoration:underline;}
+  .auth-link:hover{color:var(--text);}
+
+  /* Register panel */
+  #register-panel{display:none;flex-direction:column;align-items:center;gap:16px;width:320px;}
+  .register-title{font-size:18px;font-weight:500;text-align:center;}
+  .register-input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-family:var(--sans);font-size:14px;outline:none;}
+  .register-input:focus{border-color:var(--accent);}
+
+  /* ── App ── */
+  #app{display:none;flex-direction:column;height:100vh;}
+  .sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:fixed;left:0;top:0;}
+  .sidebar-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);}
+  .brand{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+  .user-badge{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;margin-top:12px;}
+  .user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-name{font-size:14px;font-weight:500;}
+  .user-label{font-size:11px;color:var(--success);font-family:var(--mono);}
+  .sidebar-section{padding:16px 20px 8px;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+  .upload-area{margin:0 12px;border:1px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;font-size:13px;color:var(--muted);}
+  .upload-area:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,158,255,0.05);}
+  #file-input{display:none;}
+  .sources-list{flex:1;overflow-y:auto;padding:8px 12px;}
+  .source-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;font-size:12px;color:var(--muted);margin-bottom:2px;}
+  .source-item .dot{width:6px;height:6px;border-radius:50%;background:var(--success);flex-shrink:0;}
+  .sidebar-footer{padding:12px;border-top:1px solid var(--border);}
+  .logout-btn{width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);padding:9px;border-radius:6px;font-family:var(--sans);font-size:13px;cursor:pointer;transition:all 0.2s;}
+  .logout-btn:hover{border-color:var(--danger);color:var(--danger);}
+
+  .main{margin-left:260px;display:flex;flex-direction:column;height:100vh;}
+  .top-bar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0;}
+  .intent-badge{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:20px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+  .intent-badge.active{background:rgba(79,158,255,0.1);color:var(--accent);border-color:var(--accent);}
+  .streaming-badge{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(62,207,142,0.1);color:var(--success);border:1px solid var(--success);display:none;}
+  .streaming-badge.active{display:block;animation:pulse 1s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+  .messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px;}
+  .message{display:flex;gap:14px;max-width:800px;animation:fadeUp 0.3s ease;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .message.user{flex-direction:row-reverse;align-self:flex-end;}
+  .msg-avatar{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .msg-avatar.ai{background:linear-gradient(135deg,var(--accent2),var(--accent));}
+  .msg-avatar.user-av{background:var(--surface2);font-size:13px;font-weight:600;color:var(--accent);}
+  .msg-body{flex:1;}
+  .msg-meta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+  .message.user .msg-meta{justify-content:flex-end;}
+  .msg-text{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.7;white-space:pre-wrap;}
+  .message.user .msg-text{background:var(--surface2);}
+  .cursor{display:inline-block;width:2px;height:16px;background:var(--accent);margin-left:2px;animation:blink 0.7s step-end infinite;vertical-align:middle;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  .msg-sources{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;}
+  .source-tag{font-family:var(--mono);font-size:10px;padding:3px 8px;background:rgba(79,158,255,0.08);color:var(--accent);border-radius:4px;border:1px solid rgba(79,158,255,0.2);}
+
+  .input-area{padding:20px 24px;border-top:1px solid var(--border);background:var(--bg);}
+  .input-wrapper{display:flex;gap:12px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;transition:border-color 0.2s;}
+  .input-wrapper:focus-within{border-color:var(--accent);}
+  #message-input{flex:1;background:transparent;border:none;color:var(--text);font-family:var(--sans);font-size:14px;resize:none;outline:none;min-height:24px;max-height:120px;line-height:1.5;}
+  #message-input::placeholder{color:var(--muted);}
+  .send-btn{background:var(--accent);border:none;width:36px;height:36px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;color:white;font-size:16px;}
+  .send-btn:hover{background:#3b8fef;}
+  .send-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .input-hints{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .hint-chip{font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+  .hint-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,158,255,0.05);}
+
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:13px;display:none;z-index:200;max-width:280px;}
+  .toast.show{display:block;}
+  .toast.success{border-color:var(--success);color:var(--success);}
+  .toast.error{border-color:var(--danger);color:var(--danger);}
+  .msg-text strong{color:var(--accent);font-weight:600;}
+  .msg-text code{font-family:var(--mono);font-size:12px;background:var(--surface2);padding:2px 6px;border-radius:4px;color:var(--accent2);}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div style="text-align:center">
+    <div class="auth-logo">Life Assistant</div>
+    <h1 class="auth-title">Face <span>Recognition</span><br>Required</h1>
+  </div>
+
+  <!-- Login mode -->
+  <div id="login-panel" style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+    <div class="video-container">
+      <video id="auth-video" autoplay muted playsinline></video>
+      <canvas id="auth-canvas"></canvas>
+      <div class="video-overlay">
+        <div class="face-guide">
+          <div class="scan-line"></div>
+        </div>
+      </div>
+      <div class="video-status" id="video-status">Starting camera...</div>
+    </div>
+
+    <div class="capture-progress">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-label" id="progress-label">Ready to scan</div>
+    </div>
+
+    <button class="auth-btn" id="scan-btn" onclick="startFaceScan()">🔍 Scan My Face</button>
+    <div class="auth-status" id="auth-status">Position your face in the guide</div>
+
+    <div class="auth-links">
+      <span class="auth-link" onclick="showRegister()">Register new face</span>
+      <span class="auth-link" onclick="bypassAuth()">Dev mode (skip)</span>
+    </div>
+  </div>
+
+  <!-- Register mode -->
+  <div id="register-panel">
+    <div class="register-title">Register Your Face</div>
+    <input class="register-input" id="reg-username" placeholder="Enter your username (e.g. anu)" />
+    <div class="video-container">
+      <video id="reg-video" autoplay muted playsinline></video>
+      <canvas id="reg-canvas"></canvas>
+      <div class="video-overlay">
+        <div class="face-guide"><div class="scan-line"></div></div>
+      </div>
+      <div class="video-status" id="reg-video-status">Starting camera...</div>
+    </div>
+    <div class="capture-progress">
+      <div class="progress-bar"><div class="progress-fill" id="reg-progress-fill"></div></div>
+      <div class="progress-label" id="reg-progress-label">Will capture 10 frames</div>
+    </div>
+    <button class="auth-btn" id="reg-btn" onclick="startRegistration()">📸 Start Registration</button>
+    <div class="auth-status" id="reg-status">Enter username and click start</div>
+    <span class="auth-link" onclick="showLogin()">← Back to login</span>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">Life Assistant</div>
+      <div class="user-badge">
+        <div class="user-avatar" id="sidebar-avatar">?</div>
+        <div>
+          <div class="user-name" id="sidebar-username">—</div>
+          <div class="user-label">● authenticated</div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-section">Data Sources</div>
+    <div class="upload-area" onclick="document.getElementById('file-input').click()">
+      <div style="font-size:20px;margin-bottom:4px">📎</div>
+      Click to upload PDF, TXT, MD, or JSON
+    </div>
+    <input type="file" id="file-input" accept=".pdf,.txt,.md,.json" onchange="uploadFile(event)">
+    <div class="sources-list" id="sources-list">
+      <div style="padding:10px;font-size:12px;color:var(--muted);text-align:center">No files ingested yet</div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()">🔒 Lock Session</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="top-bar">
+      <span style="font-size:13px;color:var(--muted)">Intent:</span>
+      <span class="intent-badge" id="intent-badge">general</span>
+      <span class="streaming-badge" id="streaming-badge">⚡ streaming</span>
+      <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)" id="api-status">● connecting...</span>
+    </div>
+    <div class="messages" id="messages"></div>
+    <div class="input-area">
+      <div class="input-wrapper">
+        <textarea id="message-input" placeholder="Ask anything about your notes, schedule, or tasks..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">↑</button>
+      </div>
+      <div class="input-hints">
+        <span class="hint-chip" onclick="useHint(this)">📅 What's on my schedule today?</span>
+        <span class="hint-chip" onclick="useHint(this)">📚 Summarize my PDF notes</span>
+        <span class="hint-chip" onclick="useHint(this)">✅ Help me prioritize my tasks</span>
+        <span class="hint-chip" onclick="useHint(this)">🎯 How am I doing on my goals?</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = "http://127.0.0.1:8000";
+let currentUser = null;
+let conversationHistory = [];
+let isStreaming = false;
+let authStream = null;    // webcam stream for auth
+let regStream = null;     // webcam stream for registration
+let scanInterval = null;
+let regInterval = null;
+
+// ── Session restore ───────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  const saved = sessionStorage.getItem('la_user');
+  if (saved) {
+    currentUser = saved;
+    showApp(saved);
+    loadSources();
+    checkAPI();
+    const savedMsgs = sessionStorage.getItem('la_messages');
+    if (savedMsgs) {
+      // Restore existing messages — never add welcome again
+      document.getElementById('messages').innerHTML = savedMsgs;
+    } else {
+      addWelcomeMessage(saved);
+      saveMessages();
+    }
+    const savedHistory = sessionStorage.getItem('la_history');
+    if (savedHistory) conversationHistory = JSON.parse(savedHistory);
+  } else {
+    await startCamera('auth-video', 'video-status').then(s => authStream = s);
+    checkAPI();
+  }
+});
+
+// ── Camera helpers ────────────────────────────────────────
+async function startCamera(videoId, statusId) {
+  const video = document.getElementById(videoId);
+  const statusEl = document.getElementById(statusId);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 320, height: 240, facingMode: 'user' },
+      audio: false
+    });
+    video.srcObject = stream;
+    if (statusEl) statusEl.textContent = 'Camera ready';
+    return stream;
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '❌ Camera access denied';
+    console.error('Camera error:', e);
+    return null;
+  }
+}
+
+function stopCamera(stream) {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+}
+
+function captureFrame(videoId, canvasId) {
+  const video = document.getElementById(videoId);
+  const canvas = document.getElementById(canvasId);
+  canvas.width = video.videoWidth || 320;
+  canvas.height = video.videoHeight || 240;
+  const ctx = canvas.getContext('2d');
+  // Mirror the image to match what the user sees
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0);
+  // Return as base64 JPEG
+  return canvas.toDataURL('image/jpeg', 0.8);
+}
+
+// ── LOGIN: Face Scan ──────────────────────────────────────
+async function startFaceScan() {
+  const btn = document.getElementById('scan-btn');
+  const status = document.getElementById('auth-status');
+  const progressFill = document.getElementById('progress-fill');
+  const progressLabel = document.getElementById('progress-label');
+
+  btn.disabled = true;
+  btn.textContent = '🔄 Scanning...';
+  status.textContent = 'Capturing frames...';
+  status.className = 'auth-status';
+
+  const TOTAL_FRAMES = 5;    // reduced from 8 — fewer attempts needed
+  const INTERVAL_MS = 300;   // reduced from 400ms — faster scanning
+  let framesCaptured = 0;
+  let authenticated = false;
+
+  // Send FIRST frame immediately without waiting for interval
+  const firstFrame = captureFrame('auth-video', 'auth-canvas');
+  framesCaptured++;
+  progressFill.style.width = '20%';
+  progressLabel.textContent = `Scanning... 1/${TOTAL_FRAMES}`;
+
+  try {
+    const firstResponse = await fetch(`${API_BASE}/auth/verify-face`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: firstFrame })
+    });
+    if (firstResponse.ok) {
+      const data = await firstResponse.json();
+      authenticated = true;
+      progressFill.style.width = '100%';
+      progressFill.style.background = 'var(--success)';
+      progressLabel.textContent = `✓ Recognized as ${data.username}`;
+      status.textContent = `✓ Welcome back, ${data.username}!`;
+      status.className = 'auth-status success';
+      btn.textContent = '✓ Authenticated';
+      btn.className = 'auth-btn success';
+      stopCamera(authStream);
+      setTimeout(() => enterApp(data.username), 600);
+      return;
+    }
+  } catch(e) {
+    status.textContent = '✗ Server not reachable. Is the API running?';
+    status.className = 'auth-status error';
+    btn.disabled = false;
+    btn.textContent = '🔍 Try Again';
+    return;
+  }
+
+  // Continue scanning remaining frames if first didn't match
+  scanInterval = setInterval(async () => {
+    if (authenticated) return;
+
+    try {
+      const frameB64 = captureFrame('auth-video', 'auth-canvas');
+      framesCaptured++;
+
+      const pct = Math.round((framesCaptured / TOTAL_FRAMES) * 100);
+      progressFill.style.width = pct + '%';
+      progressLabel.textContent = `Scanning... ${framesCaptured}/${TOTAL_FRAMES}`;
+
+      const response = await fetch(`${API_BASE}/auth/verify-face`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_base64: frameB64 })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        authenticated = true;
+        clearInterval(scanInterval);
+        progressFill.style.width = '100%';
+        progressFill.style.background = 'var(--success)';
+        progressLabel.textContent = `✓ Recognized as ${data.username}`;
+        status.textContent = `✓ Welcome back, ${data.username}!`;
+        status.className = 'auth-status success';
+        btn.textContent = '✓ Authenticated';
+        btn.className = 'auth-btn success';
+        stopCamera(authStream);
+        setTimeout(() => enterApp(data.username), 600);
+
+      } else if (framesCaptured >= TOTAL_FRAMES) {
+        clearInterval(scanInterval);
+        status.textContent = '✗ Face not recognized. Try again or register.';
+        status.className = 'auth-status error';
+        progressFill.style.background = 'var(--danger)';
+        btn.disabled = false;
+        btn.textContent = '🔍 Try Again';
+        btn.className = 'auth-btn';
+        progressFill.style.width = '0%';
+        progressFill.style.background = 'var(--accent)';
+        progressLabel.textContent = 'Ready to scan';
+      }
+
+    } catch(e) {
+      clearInterval(scanInterval);
+      status.textContent = '✗ Server not reachable. Is the API running?';
+      status.className = 'auth-status error';
+      btn.disabled = false;
+      btn.textContent = '🔍 Try Again';
+    }
+
+  }, INTERVAL_MS);
+}
+
+// ── REGISTER: New Face ────────────────────────────────────
+function showRegister() {
+  stopCamera(authStream);
+  document.getElementById('login-panel').style.display = 'none';
+  document.getElementById('register-panel').style.display = 'flex';
+  startCamera('reg-video', 'reg-video-status').then(s => regStream = s);
+}
+
+function showLogin() {
+  stopCamera(regStream);
+  document.getElementById('register-panel').style.display = 'none';
+  document.getElementById('login-panel').style.display = 'flex';
+  startCamera('auth-video', 'video-status').then(s => authStream = s);
+}
+
+async function startRegistration() {
+  const username = document.getElementById('reg-username').value.trim().toLowerCase();
+  if (!username) {
+    document.getElementById('reg-status').textContent = '✗ Please enter a username first';
+    document.getElementById('reg-status').className = 'auth-status error';
+    return;
+  }
+
+  const btn = document.getElementById('reg-btn');
+  const status = document.getElementById('reg-status');
+  const progressFill = document.getElementById('reg-progress-fill');
+  const progressLabel = document.getElementById('reg-progress-label');
+
+  btn.disabled = true;
+  status.textContent = 'Capturing your face...';
+  status.className = 'auth-status';
+
+  const TOTAL_FRAMES = 10;
+  const frames = [];
+
+  // Capture frames one by one
+  for (let i = 0; i < TOTAL_FRAMES; i++) {
+    await new Promise(r => setTimeout(r, 500)); // wait 500ms between frames
+    const frame = captureFrame('reg-video', 'reg-canvas');
+    frames.push(frame);
+    const pct = Math.round(((i + 1) / TOTAL_FRAMES) * 100);
+    progressFill.style.width = pct + '%';
+    progressLabel.textContent = `Captured ${i + 1}/${TOTAL_FRAMES} frames`;
+  }
+
+  // Send to backend for registration
+  status.textContent = 'Processing face data...';
+  try {
+    const response = await fetch(`${API_BASE}/auth/register-browser`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, images_base64: frames })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      progressFill.style.background = 'var(--success)';
+      status.textContent = `✓ Registered! ${data.samples} face samples saved for "${username}"`;
+      status.className = 'auth-status success';
+      btn.textContent = '✓ Registered!';
+      btn.className = 'auth-btn success';
+
+      // Auto-switch to login after 2s
+      setTimeout(() => {
+        showLogin();
+        document.getElementById('auth-status').textContent =
+          `Face registered for "${username}". Now scan to login.`;
+      }, 2000);
+    } else {
+      status.textContent = '✗ ' + (data.detail || 'Registration failed');
+      status.className = 'auth-status error';
+      btn.disabled = false;
+      btn.textContent = '📸 Try Again';
+      progressFill.style.width = '0%';
+    }
+  } catch(e) {
+    status.textContent = '✗ Cannot reach server';
+    status.className = 'auth-status error';
+    btn.disabled = false;
+    btn.textContent = '📸 Try Again';
+  }
+}
+
+function bypassAuth() {
+  const u = prompt("Enter username (dev mode):");
+  if (u && u.trim()) {
+    stopCamera(authStream);
+    enterApp(u.trim().toLowerCase());
+  }
+}
+
+// ── App ───────────────────────────────────────────────────
+function enterApp(username) {
+  // Guard — if already in app with same user, don't re-initialize
+  if (currentUser === username && document.getElementById('app').style.display !== 'none') return;
+
+  sessionStorage.removeItem('la_messages');
+  sessionStorage.removeItem('la_history');
+  conversationHistory = [];
+  currentUser = username;
+  sessionStorage.setItem('la_user', username);
+  showApp(username);
+  loadSources();
+  checkAPI();
+  addWelcomeMessage(username);
+  saveMessages();
+}
+
+function showApp(username) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('sidebar-username').textContent = username;
+  document.getElementById('sidebar-avatar').textContent = username.charAt(0).toUpperCase();
+}
+
+function addWelcomeMessage(username) {
+  addMessage('ai', `Hello **${username}**! 👋 I'm your personal life assistant.\n\nYou've logged in via **browser face recognition** — no separate window needed.\n\nUpload your notes, PDFs, or schedule files using the sidebar, then ask me anything!`);
+}
+
+function logout() {
+  currentUser = null;
+  conversationHistory = [];
+  sessionStorage.clear();
+  document.getElementById('messages').innerHTML = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('login-panel').style.display = 'flex';
+  document.getElementById('register-panel').style.display = 'none';
+
+  // Reset auth UI
+  document.getElementById('scan-btn').disabled = false;
+  document.getElementById('scan-btn').textContent = '🔍 Scan My Face';
+  document.getElementById('scan-btn').className = 'auth-btn';
+  document.getElementById('auth-status').textContent = 'Position your face in the guide';
+  document.getElementById('auth-status').className = 'auth-status';
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('progress-fill').style.background = 'var(--accent)';
+  document.getElementById('progress-label').textContent = 'Ready to scan';
+
+  // Restart camera
+  startCamera('auth-video', 'video-status').then(s => authStream = s);
+}
+
+// ── Streaming Chat ────────────────────────────────────────
+async function sendMessage() {
+  const input = document.getElementById('message-input');
+  const message = input.value.trim();
+  if (!message || !currentUser || isStreaming) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+  isStreaming = true;
+
+  addMessage('user', message);
+  conversationHistory.push({ role: 'user', content: message });
+
+  const aiMsgDiv = createStreamingBubble();
+  const textEl = aiMsgDiv.querySelector('.msg-text');
+  const sourcesEl = aiMsgDiv.querySelector('.msg-sources');
+
+  document.getElementById('streaming-badge').classList.add('active');
+
+  let fullText = '';
+
+  try {
+    const response = await fetch(`${API_BASE}/chat/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: currentUser,
+        message,
+        conversation_history: conversationHistory.slice(-10)
+      })
+    });
+
+    if (!response.ok) throw new Error(`Server error: ${response.status}`);
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const jsonStr = line.slice(6).trim();
+        if (!jsonStr) continue;
+        try {
+          const event = JSON.parse(jsonStr);
+          if (event.type === 'chunk') {
+            fullText += event.text;
+            textEl.innerHTML = formatText(fullText) + '<span class="cursor"></span>';
+            scrollToBottom();
+          } else if (event.type === 'sources') {
+            if (event.data?.length) {
+              sourcesEl.innerHTML = event.data.map(s =>
+                `<span class="source-tag">📄 ${s}</span>`).join('');
+            }
+            const badge = document.getElementById('intent-badge');
+            badge.textContent = event.intent || 'general';
+            badge.className = 'intent-badge' + (event.intent !== 'general' ? ' active' : '');
+          } else if (event.type === 'done') {
+            textEl.innerHTML = formatText(fullText);
+            conversationHistory.push({ role: 'assistant', content: fullText });
+            saveMessages();
+            sessionStorage.setItem('la_history', JSON.stringify(conversationHistory));
+          } else if (event.type === 'error') {
+            textEl.innerHTML = '⚠️ Error: ' + event.message;
+          }
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    textEl.innerHTML = '⚠️ Cannot reach the server. Make sure it\'s running.';
+  }
+
+  document.getElementById('streaming-badge').classList.remove('active');
+  document.getElementById('send-btn').disabled = false;
+  isStreaming = false;
+  document.getElementById('message-input').focus();
+  saveMessages();
+}
+
+function createStreamingBubble() {
+  const messages = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'message';
+  const time = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+  div.innerHTML = `
+    <div class="msg-avatar ai">🤖</div>
+    <div class="msg-body">
+      <div class="msg-meta">Assistant · ${time}</div>
+      <div class="msg-text"><span class="cursor"></span></div>
+      <div class="msg-sources"></div>
+    </div>`;
+  messages.appendChild(div);
+  scrollToBottom();
+  return div;
+}
+
+function formatText(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.*?)`/g, '<code>$1</code>');
+}
+
+function scrollToBottom() {
+  const m = document.getElementById('messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+function saveMessages() {
+  sessionStorage.setItem('la_messages', document.getElementById('messages').innerHTML);
+}
+
+function addMessage(role, text, sources = []) {
+  const messages = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `message ${role === 'user' ? 'user' : ''}`;
+  const time = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+  const formatted = formatText(text);
+  const sourceTags = sources.length
+    ? `<div class="msg-sources">${sources.map(s => `<span class="source-tag">📄 ${s}</span>`).join('')}</div>` : '';
+  div.innerHTML = role === 'user'
+    ? `<div class="msg-avatar user-av">${currentUser?.charAt(0).toUpperCase()||'U'}</div>
+       <div class="msg-body"><div class="msg-meta">${time}</div><div class="msg-text">${formatted}</div></div>`
+    : `<div class="msg-avatar ai">🤖</div>
+       <div class="msg-body"><div class="msg-meta">Assistant · ${time}</div><div class="msg-text">${formatted}</div>${sourceTags}</div>`;
+  messages.appendChild(div);
+  scrollToBottom();
+}
+
+// ── File Upload ───────────────────────────────────────────
+async function uploadFile(event) {
+  const file = event.target.files[0];
+  if (!file || !currentUser) return;
+  showToast(`Uploading ${file.name}...`, '');
+  const formData = new FormData();
+  formData.append('username', currentUser);
+  formData.append('file', file);
+  try {
+    const r = await fetch(`${API_BASE}/ingest`, { method:'POST', body:formData });
+    if (r.ok) {
+      const data = await r.json();
+      showToast(`✓ ${file.name} — ${data.chunks_ingested} chunks`, 'success');
+      loadSources();
+    } else {
+      const err = await r.json();
+      showToast(`✗ ${err.detail||'Upload failed'}`, 'error');
+    }
+  } catch(e) { showToast('✗ Server not reachable','error'); }
+  event.target.value = '';
+}
+
+async function loadSources() {
+  if (!currentUser) return;
+  try {
+    const r = await fetch(`${API_BASE}/sources/${currentUser}`);
+    if (r.ok) {
+      const data = await r.json();
+      const list = document.getElementById('sources-list');
+      list.innerHTML = data.sources.length
+        ? data.sources.map(s =>
+            `<div class="source-item"><div class="dot"></div>
+             <span title="${s}">${s.length>28?s.substring(0,25)+'...':s}</span></div>`).join('')
+        : `<div style="padding:10px;font-size:12px;color:var(--muted);text-align:center">No files ingested yet</div>`;
+    }
+  } catch(e) {}
+}
+
+async function checkAPI() {
+  const status = document.getElementById('api-status');
+  try {
+    const r = await fetch(`${API_BASE}/health`);
+    if (r.ok) { status.textContent='● connected'; status.style.color='var(--success)'; }
+  } catch(e) { status.textContent='● server offline'; status.style.color='var(--danger)'; }
+}
+
+function handleKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+function useHint(el) { document.getElementById('message-input').value=el.textContent.replace(/^[^\s]+ /,''); document.getElementById('message-input').focus(); }
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+type;
+  clearTimeout(t._timer); t._timer=setTimeout(()=>t.className='toast',3000);
+}
+</script>
+</body>
+</html>

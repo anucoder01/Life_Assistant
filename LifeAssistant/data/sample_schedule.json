@@ -1,0 +1,105 @@
+{
+  "schedule": [
+    {
+      "date": "2024-01-15",
+      "day": "Monday",
+      "time": "07:00",
+      "task": "Morning workout - 45 minutes cardio",
+      "priority": "high",
+      "category": "health"
+    },
+    {
+      "date": "2024-01-15",
+      "day": "Monday",
+      "time": "09:00",
+      "task": "Study Machine Learning - Chapter 5: Neural Networks",
+      "priority": "high",
+      "category": "study",
+      "duration": "2 hours"
+    },
+    {
+      "date": "2024-01-15",
+      "day": "Monday",
+      "time": "11:30",
+      "task": "Review and summarize yesterday's notes",
+      "priority": "medium",
+      "category": "study"
+    },
+    {
+      "date": "2024-01-15",
+      "day": "Monday",
+      "time": "14:00",
+      "task": "Complete Python project - data pipeline module",
+      "priority": "high",
+      "category": "project",
+      "deadline": "2024-01-17"
+    },
+    {
+      "date": "2024-01-15",
+      "day": "Monday",
+      "time": "17:00",
+      "task": "Evening walk - 30 minutes",
+      "priority": "low",
+      "category": "health"
+    },
+    {
+      "date": "2024-01-16",
+      "day": "Tuesday",
+      "time": "09:00",
+      "task": "DSA Practice - Trees and Graphs (LeetCode)",
+      "priority": "high",
+      "category": "study",
+      "duration": "90 minutes"
+    },
+    {
+      "date": "2024-01-16",
+      "day": "Tuesday",
+      "time": "11:00",
+      "task": "Read research paper: Attention is All You Need",
+      "priority": "medium",
+      "category": "study"
+    },
+    {
+      "date": "2024-01-16",
+      "day": "Tuesday",
+      "time": "15:00",
+      "task": "Team meeting - project status update",
+      "priority": "high",
+      "category": "work"
+    },
+    {
+      "date": "2024-01-17",
+      "day": "Wednesday",
+      "time": "10:00",
+      "task": "Submit Python project data pipeline module",
+      "priority": "urgent",
+      "category": "project",
+      "deadline": "2024-01-17"
+    }
+  ],
+  "goals": [
+    {
+      "goal": "Complete ML Specialization course",
+      "target_date": "2024-03-01",
+      "progress": "40%",
+      "daily_target": "2 hours of study"
+    },
+    {
+      "goal": "Solve 150 LeetCode problems",
+      "target_date": "2024-02-15",
+      "progress": "67 solved",
+      "daily_target": "2 problems per day"
+    },
+    {
+      "goal": "Morning workout routine",
+      "target_date": "ongoing",
+      "streak": "12 days",
+      "target": "5 days per week"
+    }
+  ],
+  "habits": [
+    {"habit": "Morning workout", "frequency": "daily", "current_streak": 12, "best_streak": 21},
+    {"habit": "Reading 30 min", "frequency": "daily", "current_streak": 5, "best_streak": 14},
+    {"habit": "No phone before 8am", "frequency": "daily", "current_streak": 3, "best_streak": 7}
+  ]
+}
