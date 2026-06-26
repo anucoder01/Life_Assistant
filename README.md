@@ -120,3 +120,11 @@ LifeAssistant/
 - **Biometrics:** OpenCV & face_recognition
 - **Memory Storage:** SQLite
 - **Frontend:** HTML, CSS, Vanilla JavaScript
+
+---
+
+## ©️ License & Copyright
+
+**Copyright (c) 2026 Anu (anucoder01). All Rights Reserved.**
+
+This project is proprietary and closed-source. You may not copy, modify, distribute, or use this code for any purpose without explicit written permission from the copyright holder.
