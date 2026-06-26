@@ -34,6 +34,7 @@ def load_json_schedule(file_path: str, username: str) -> List[Dict]:
     # Convert each schedule item into a text chunk
     items = data.get("schedule", data if isinstance(data, list) else [])
 
+    mtime = os.path.getmtime(file_path)
     for i, item in enumerate(items):
         # Convert the schedule item to natural language text
         if isinstance(item, dict):
@@ -50,7 +51,8 @@ def load_json_schedule(file_path: str, username: str) -> List[Dict]:
                 "source": path.name,
                 "type": "schedule",
                 "user": username,
-                "chunk_id": i
+                "chunk_id": i,
+                "timestamp": mtime
             }
         })
 

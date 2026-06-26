@@ -63,8 +63,8 @@
   .register-input:focus{border-color:var(--accent);}
 
   /* ── App ── */
-  #app{display:none;flex-direction:column;height:100vh;}
-  .sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:fixed;left:0;top:0;}
+  #app{display:none;flex-direction:row;height:100vh;width:100vw;overflow:hidden;}
+  .sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;flex-shrink:0;}
   .sidebar-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);}
   .brand{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
   .user-badge{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;margin-top:12px;}
@@ -82,7 +82,7 @@
   .logout-btn{width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);padding:9px;border-radius:6px;font-family:var(--sans);font-size:13px;cursor:pointer;transition:all 0.2s;}
   .logout-btn:hover{border-color:var(--danger);color:var(--danger);}
 
-  .main{margin-left:260px;display:flex;flex-direction:column;height:100vh;}
+  .main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
   .top-bar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0;}
   .intent-badge{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:20px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
   .intent-badge.active{background:rgba(79,158,255,0.1);color:var(--accent);border-color:var(--accent);}
@@ -128,6 +128,196 @@
   .toast.error{border-color:var(--danger);color:var(--danger);}
   .msg-text strong{color:var(--accent);font-weight:600;}
   .msg-text code{font-family:var(--mono);font-size:12px;background:var(--surface2);padding:2px 6px;border-radius:4px;color:var(--accent2);}
+
+  /* ── Preview Panel ── */
+  .preview-panel {
+    width: 0;
+    opacity: 0;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    position: relative;
+    z-index: 10;
+  }
+  .preview-panel.open {
+    width: 480px;
+    opacity: 1;
+  }
+  .resize-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 20;
+    transition: background 0.2s;
+  }
+  .resize-handle:hover, .resize-handle.resizing {
+    background: rgba(79, 158, 255, 0.4);
+  }
+  .preview-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .preview-icon {
+    font-size: 20px;
+  }
+  .preview-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .preview-subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .preview-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+  .preview-close-btn:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  
+  .preview-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .preview-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    padding: 12px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .preview-tab:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.02);
+  }
+  .preview-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: var(--surface);
+  }
+  
+  .preview-body {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .tab-content {
+    display: none;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+  }
+  .tab-content.active-content {
+    display: flex;
+  }
+  
+  .preview-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #fff;
+  }
+  .preview-text-container {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 24px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: #e2e8f0;
+    background: var(--bg);
+    white-space: pre-wrap;
+  }
+  
+  .preview-chunks-list {
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+    background: var(--bg);
+  }
+  .chunk-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .chunk-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .chunk-card-meta {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+  .chunk-card-score {
+    color: var(--success);
+  }
+  .chunk-card-text {
+    color: var(--text);
+  }
+  
+  .text-highlight {
+    background: rgba(245, 158, 11, 0.3);
+    border-left: 3px solid var(--warn);
+    padding: 2px 4px;
+    border-radius: 2px;
+  }
 </style>
 </head>
 <body>
@@ -233,6 +423,35 @@
         <span class="hint-chip" onclick="useHint(this)">📚 Summarize my PDF notes</span>
         <span class="hint-chip" onclick="useHint(this)">✅ Help me prioritize my tasks</span>
         <span class="hint-chip" onclick="useHint(this)">🎯 How am I doing on my goals?</span>
+      </div>
+  </div>
+
+  <!-- PREVIEW PANEL -->
+  <div class="preview-panel" id="preview-panel">
+    <div class="resize-handle" id="preview-resize-handle"></div>
+    <div class="preview-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="preview-icon">📄</span>
+        <div style="display:flex; flex-direction:column; max-width:320px;">
+          <span class="preview-title" id="preview-title">Document Preview</span>
+          <span class="preview-subtitle" id="preview-subtitle">No file selected</span>
+        </div>
+      </div>
+      <button class="preview-close-btn" onclick="closePreview()">×</button>
+    </div>
+    
+    <div class="preview-tabs">
+      <button class="preview-tab active" id="tab-doc" onclick="switchPreviewTab('doc')">Document View</button>
+      <button class="preview-tab" id="tab-chunks" onclick="switchPreviewTab('chunks')">Retrieved Chunks</button>
+    </div>
+    
+    <div class="preview-body">
+      <div id="preview-doc-content" class="tab-content active-content">
+        <iframe id="preview-iframe" class="preview-iframe" src="about:blank"></iframe>
+        <div id="preview-text-container" class="preview-text-container"></div>
+      </div>
+      <div id="preview-chunks-content" class="tab-content">
+        <div id="preview-chunks-list" class="preview-chunks-list"></div>
       </div>
     </div>
   </div>
@@ -620,8 +839,13 @@ async function sendMessage() {
             scrollToBottom();
           } else if (event.type === 'sources') {
             if (event.data?.length) {
-              sourcesEl.innerHTML = event.data.map(s =>
-                `<span class="source-tag">📄 ${s}</span>`).join('');
+              sourcesEl.innerHTML = event.data.map(s => {
+                const fileChunks = (event.chunks || []).filter(c => c.filename === s);
+                const pages = fileChunks.map(c => c.page).filter(p => p !== null && p !== undefined);
+                const pageStr = pages.length ? ` (p. ${pages.join(', ')})` : '';
+                const encodedChunks = btoa(unescape(encodeURIComponent(JSON.stringify(fileChunks))));
+                return `<span class="source-tag clickable" style="cursor:pointer;" data-chunks="${encodedChunks}" onclick="openPreview(this)">📄 ${s}${pageStr}</span>`;
+              }).join('');
             }
             const badge = document.getElementById('intent-badge');
             badge.textContent = event.intent || 'general';
@@ -687,7 +911,15 @@ function addMessage(role, text, sources = []) {
   const time = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
   const formatted = formatText(text);
   const sourceTags = sources.length
-    ? `<div class="msg-sources">${sources.map(s => `<span class="source-tag">📄 ${s}</span>`).join('')}</div>` : '';
+    ? `<div class="msg-sources">${sources.map(s => {
+        const isObj = typeof s === 'object' && s !== null;
+        const filename = isObj ? s.filename : s;
+        const chunks = isObj ? (s.chunks || []) : [];
+        const pages = chunks.map(c => c.page).filter(p => p !== null && p !== undefined);
+        const pageStr = pages.length ? ` (p. ${pages.join(', ')})` : '';
+        const encodedChunks = chunks.length ? btoa(unescape(encodeURIComponent(JSON.stringify(chunks)))) : '';
+        return `<span class="source-tag clickable" style="cursor:pointer;" data-chunks="${encodedChunks}" onclick="openPreview(this)">📄 ${filename}${pageStr}</span>`;
+      }).join('')}</div>` : '';
   div.innerHTML = role === 'user'
     ? `<div class="msg-avatar user-av">${currentUser?.charAt(0).toUpperCase()||'U'}</div>
        <div class="msg-body"><div class="msg-meta">${time}</div><div class="msg-text">${formatted}</div></div>`
@@ -728,7 +960,7 @@ async function loadSources() {
       const list = document.getElementById('sources-list');
       list.innerHTML = data.sources.length
         ? data.sources.map(s =>
-            `<div class="source-item"><div class="dot"></div>
+            `<div class="source-item" style="cursor:pointer;" onclick="showFilePreview('${s}', [])"><div class="dot"></div>
              <span title="${s}">${s.length>28?s.substring(0,25)+'...':s}</span></div>`).join('')
         : `<div style="padding:10px;font-size:12px;color:var(--muted);text-align:center">No files ingested yet</div>`;
     }
@@ -751,6 +983,216 @@ function showToast(msg, type) {
   t.textContent=msg; t.className='toast show '+type;
   clearTimeout(t._timer); t._timer=setTimeout(()=>t.className='toast',3000);
 }
+
+// ── Preview Panel JS Controller ──
+let activeFilename = null;
+let activeChunks = [];
+
+function openPreview(element) {
+  const filename = element.innerText.replace(/^📄 /, '').replace(/\s*\(p\..*\)$/, '').trim();
+  const encodedChunks = element.getAttribute('data-chunks');
+  let chunks = [];
+  if (encodedChunks) {
+    try {
+      chunks = JSON.parse(decodeURIComponent(escape(atob(encodedChunks))));
+    } catch(e) {
+      console.error("Error parsing chunks", e);
+    }
+  }
+  showFilePreview(filename, chunks);
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function showFilePreview(filename, chunks) {
+  activeFilename = filename;
+  activeChunks = chunks;
+  
+  const panel = document.getElementById('preview-panel');
+  panel.classList.add('open');
+  
+  document.getElementById('preview-title').textContent = filename;
+  document.getElementById('preview-subtitle').textContent = chunks.length 
+    ? `${chunks.length} matching segment(s) retrieved`
+    : 'Full document view';
+    
+  const iframe = document.getElementById('preview-iframe');
+  const textContainer = document.getElementById('preview-text-container');
+  
+  // Set up tabs
+  switchPreviewTab('doc');
+  
+  const isPdf = filename.toLowerCase().endsWith('.pdf');
+  
+  if (isPdf) {
+    iframe.style.display = 'block';
+    textContainer.style.display = 'none';
+    
+    let pageNum = '';
+    if (chunks.length) {
+      const pages = chunks.map(c => c.page).filter(p => p !== null && p !== undefined);
+      if (pages.length) {
+        pageNum = `#page=${pages[0]}`;
+      }
+    }
+    
+    iframe.src = `${API_BASE}/files/${currentUser}/${filename}${pageNum}`;
+  } else {
+    iframe.style.display = 'none';
+    textContainer.style.display = 'block';
+    iframe.src = 'about:blank';
+    
+    textContainer.textContent = 'Loading file contents...';
+    
+    try {
+      const response = await fetch(`${API_BASE}/files/${currentUser}/${filename}`);
+      if (!response.ok) throw new Error("Could not load file");
+      const text = await response.text();
+      
+      let htmlContent = escapeHtml(text);
+      
+      chunks.forEach((chunk, idx) => {
+        const cleanChunk = chunk.text.trim();
+        if (!cleanChunk) return;
+        
+        const escapedChunk = escapeHtml(cleanChunk);
+        
+        if (htmlContent.includes(escapedChunk)) {
+          htmlContent = htmlContent.replace(
+            escapedChunk,
+            `<span class="text-highlight" id="highlight-chunk-${idx}">${escapedChunk}</span>`
+          );
+        } else {
+          const prefix = escapedChunk.substring(0, Math.min(40, escapedChunk.length));
+          if (prefix && htmlContent.includes(prefix)) {
+            htmlContent = htmlContent.replace(
+              prefix,
+              `<span class="text-highlight" id="highlight-chunk-${idx}">${prefix}</span>`
+            );
+          }
+        }
+      });
+      
+      textContainer.innerHTML = htmlContent;
+      
+      setTimeout(() => {
+        const firstHighlight = document.getElementById('highlight-chunk-0');
+        if (firstHighlight) {
+          firstHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      
+    } catch (e) {
+      textContainer.textContent = `❌ Error loading file content: ${e.message}`;
+    }
+  }
+  
+  const chunksList = document.getElementById('preview-chunks-list');
+  if (chunks.length === 0) {
+    chunksList.innerHTML = `<div style="color:var(--muted); text-align:center; padding:40px 20px; font-size:13px;">No chunks retrieved for this query.</div>`;
+  } else {
+    chunksList.innerHTML = chunks.map((chunk, idx) => `
+      <div class="chunk-card" onclick="scrollToChunk(${idx}, ${chunk.page || 'null'})">
+        <div class="chunk-card-meta">
+          <span>${chunk.page ? `Page ${chunk.page}` : 'Note Segment'}</span>
+          <span class="chunk-card-score">Score: ${chunk.score}</span>
+        </div>
+        <div class="chunk-card-text">${escapeHtml(chunk.text)}</div>
+      </div>
+    `).join('');
+  }
+}
+
+function closePreview() {
+  const panel = document.getElementById('preview-panel');
+  panel.classList.remove('open');
+  const iframe = document.getElementById('preview-iframe');
+  iframe.src = 'about:blank';
+  activeFilename = null;
+  activeChunks = [];
+}
+
+function switchPreviewTab(tab) {
+  const tabDoc = document.getElementById('tab-doc');
+  const tabChunks = document.getElementById('tab-chunks');
+  const contentDoc = document.getElementById('preview-doc-content');
+  const contentChunks = document.getElementById('preview-chunks-content');
+  
+  if (tab === 'doc') {
+    tabDoc.classList.add('active');
+    tabChunks.classList.remove('active');
+    contentDoc.classList.add('active-content');
+    contentChunks.classList.remove('active-content');
+  } else {
+    tabDoc.classList.remove('active');
+    tabChunks.classList.add('active');
+    contentDoc.classList.remove('active-content');
+    contentChunks.classList.add('active-content');
+  }
+}
+
+function scrollToChunk(idx, page) {
+  switchPreviewTab('doc');
+  
+  const isPdf = activeFilename.toLowerCase().endsWith('.pdf');
+  if (isPdf && page) {
+    const iframe = document.getElementById('preview-iframe');
+    const baseUrl = `${API_BASE}/files/${currentUser}/${activeFilename}`;
+    iframe.src = `${baseUrl}#page=${page}`;
+  } else {
+    const element = document.getElementById(`highlight-chunk-${idx}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.style.outline = '2px solid var(--accent)';
+      setTimeout(() => { element.style.outline = 'none'; }, 2000);
+    }
+  }
+}
+
+// Resizing logic
+(function() {
+  let isResizing = false;
+  let startX, startWidth;
+  
+  setTimeout(() => {
+    const panel = document.getElementById('preview-panel');
+    const handle = document.getElementById('preview-resize-handle');
+    if (!handle || !panel) return;
+    
+    handle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(document.defaultView.getComputedStyle(panel).width, 10);
+      handle.classList.add('resizing');
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const width = startWidth - (e.clientX - startX);
+      if (width > 280 && width < window.innerWidth * 0.8) {
+        panel.style.width = width + 'px';
+      }
+    });
+    
+    document.addEventListener('mouseup', () => {
+      if (isResizing) {
+        isResizing = false;
+        handle.classList.remove('resizing');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    });
+  }, 500);
+})();
 </script>
 </body>
 </html>

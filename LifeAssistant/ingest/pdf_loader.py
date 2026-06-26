@@ -66,6 +66,7 @@ def load_pdf(pdf_path: str, username: str) -> List[Dict]:
             "source": "filename.pdf",
             "type": "pdf",
             "user": "alice",
+            "page": 1,
             "chunk_id": 3
         }
     }
@@ -73,21 +74,33 @@ def load_pdf(pdf_path: str, username: str) -> List[Dict]:
     path = Path(pdf_path)
     print(f"📄 Loading PDF: {path.name}")
 
-    raw_text = extract_text_from_pdf(pdf_path)
-    chunks = chunk_text(raw_text)
-
+    doc = fitz.open(pdf_path)
     documents = []
-    for i, chunk in enumerate(chunks):
-        documents.append({
-            "text": chunk,
-            "metadata": {
-                "source": path.name,
-                "type": "pdf",
-                "user": username,
-                "chunk_id": i,
-                "total_chunks": len(chunks)
-            }
-        })
+    chunk_index = 0
+    mtime = os.path.getmtime(pdf_path)
+
+    for page_num, page in enumerate(doc):
+        text = page.get_text()
+        if not text.strip():
+            continue
+        page_chunks = chunk_text(text)
+        for chunk in page_chunks:
+            documents.append({
+                "text": f"[Page {page_num + 1}] {chunk}",
+                "metadata": {
+                    "source": path.name,
+                    "type": "pdf",
+                    "user": username,
+                    "page": page_num + 1,
+                    "chunk_id": chunk_index,
+                    "timestamp": mtime
+                }
+            })
+            chunk_index += 1
+    doc.close()
+
+    for doc_item in documents:
+        doc_item["metadata"]["total_chunks"] = len(documents)
 
     print(f"   → {len(documents)} chunks extracted from {path.name}")
     return documents

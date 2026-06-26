@@ -27,6 +27,7 @@ def load_note(file_path: str, username: str) -> List[Dict]:
     chunks = chunk_text(raw_text)
     documents = []
 
+    mtime = os.path.getmtime(file_path)
     for i, chunk in enumerate(chunks):
         documents.append({
             "text": chunk,
@@ -35,7 +36,8 @@ def load_note(file_path: str, username: str) -> List[Dict]:
                 "type": "note",
                 "user": username,
                 "chunk_id": i,
-                "total_chunks": len(chunks)
+                "total_chunks": len(chunks),
+                "timestamp": mtime
             }
         })
 

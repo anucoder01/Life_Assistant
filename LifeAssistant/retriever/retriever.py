@@ -9,6 +9,44 @@ from embeddings.vector_store import VectorStore
 from memory.long_term_memory import MemoryStore
 from config import TOP_K_RESULTS
 import time
+import datetime
+import re
+
+
+def extract_date_from_query(query: str) -> str:
+    """Helper to extract a target date from the query string (returns YYYY-MM-DD)."""
+    query_lower = query.lower()
+    
+    # Check for direct date match like YYYY-MM-DD
+    match = re.search(r'\b\d{4}-\d{2}-\d{2}\b', query_lower)
+    if match:
+        return match.group(0)
+        
+    today = datetime.date.today()
+    
+    if 'today' in query_lower:
+        return today.strftime('%Y-%m-%d')
+    elif 'tomorrow' in query_lower:
+        tomorrow = today + datetime.timedelta(days=1)
+        return tomorrow.strftime('%Y-%m-%d')
+    elif 'yesterday' in query_lower:
+        yesterday = today - datetime.timedelta(days=1)
+        return yesterday.strftime('%Y-%m-%d')
+        
+    days_of_week = {
+        'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+        'friday': 4, 'saturday': 5, 'sunday': 6
+    }
+    for day, target_weekday in days_of_week.items():
+        if day in query_lower:
+            current_weekday = today.weekday()
+            days_ahead = target_weekday - current_weekday
+            if days_ahead < 0:
+                days_ahead += 7
+            target_date = today + datetime.timedelta(days=days_ahead)
+            return target_date.strftime('%Y-%m-%d')
+            
+    return None
 
 
 class Retriever:
@@ -20,8 +58,7 @@ class Retriever:
 
     def retrieve(self, query: str, top_k: int = TOP_K_RESULTS) -> Dict:
         """
-        Single retrieval call — returns everything needed.
-        Call this ONCE per request, then pass result to build_context_from_retrieved.
+        Single retrieval call — returns chronologically reranked and boosted context.
         """
         t0 = time.time()
 
@@ -33,15 +70,66 @@ class Retriever:
             query, username=self.username, top_k=3
         )
 
-        # 3. Format document context — accept all results
-        doc_context_parts = []
-        sources_used = set()
-
+        # Rerank document results based on time decay and query date-boost
+        current_time = time.time()
+        reranked_results = []
+        target_date = extract_date_from_query(query)
+        
         for result in doc_results:
-            if result["relevance_score"] > 0.0:
+            score = result["relevance_score"]
+            meta = result.get("metadata", {})
+            mtime = meta.get("timestamp")
+            text = result.get("text", "")
+            
+            # Time Decay (0.5% score decay per day)
+            if mtime:
+                age_days = max(0.0, (current_time - mtime) / 86400.0)
+                decay_factor = 2.71828 ** (-0.005 * age_days)
+                decay_factor = max(0.2, decay_factor)  # Bounded
+                score = score * decay_factor
+                
+            # Date Boost (+0.3 relevance score if date matches query)
+            if target_date:
+                try:
+                    dt = datetime.datetime.strptime(target_date, "%Y-%m-%d")
+                    date_formats = [
+                        target_date,
+                        dt.strftime("%Y-%m-%d"),
+                        dt.strftime("%d-%m-%Y"),
+                        dt.strftime("%b %d"),
+                        dt.strftime("%B %d"),
+                        dt.strftime("%d %b"),
+                        dt.strftime("%d %B"),
+                        f"{dt.month}/{dt.day}",
+                        f"{dt.day}/{dt.month}",
+                    ]
+                    if any(fmt.lower() in text.lower() for fmt in date_formats):
+                        score += 0.3
+                except Exception:
+                    pass
+                    
+            result["adjusted_score"] = score
+            reranked_results.append(result)
+            
+        # Re-sort results by adjusted score
+        reranked_results.sort(key=lambda x: x["adjusted_score"], reverse=True)
+
+        # 3. Format document context
+        doc_context_parts = []
+        sources_used = []
+
+        for result in reranked_results:
+            if result.get("adjusted_score", result["relevance_score"]) > 0.0:
                 source = result["metadata"].get("source", "unknown")
-                sources_used.add(source)
-                doc_context_parts.append(f"[From {source}]\n{result['text']}")
+                if source not in sources_used:
+                    sources_used.append(source)
+                
+                # Include page number in citation if available
+                page_str = ""
+                if "page" in result["metadata"]:
+                    page_str = f" Page {result['metadata']['page']}"
+                
+                doc_context_parts.append(f"[From {source}{page_str}]\n{result['text']}")
 
         document_context = "\n\n---\n\n".join(doc_context_parts)
 
@@ -55,13 +143,13 @@ class Retriever:
 
         elapsed = round((time.time() - t0) * 1000)
         print(f"🔍 Retrieved {len(doc_results)} chunks in {elapsed}ms | "
-              f"Sources: {list(sources_used)}")
+              f"Sources: {sources_used}")
 
         return {
             "document_context": document_context,
             "memory_context": memory_context,
-            "sources": list(sources_used),
-            "raw_results": doc_results,
+            "sources": sources_used,
+            "raw_results": reranked_results,
             "has_context": bool(document_context or memory_context)
         }
 

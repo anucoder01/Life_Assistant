@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from typing import List
 import shutil
@@ -72,9 +72,16 @@ class ChatRequest(BaseModel):
     message: str
     conversation_history: List[dict] = []
 
+class SourceChunk(BaseModel):
+    filename: str
+    page: int = None
+    text: str
+    score: float
+
 class ChatResponse(BaseModel):
     response: str
     sources: List[str]
+    source_chunks: List[SourceChunk] = []
     intent: str
     interaction_id: int
 
@@ -112,7 +119,7 @@ async def verify_face(request: FaceAuthRequest):
 @app.post("/auth/register-browser")
 async def register_face_browser(request: FaceRegisterRequest):
     try:
-        from face_auth.register_face_api import register_from_images
+        from face_auth.register_face import register_from_images
         username = normalize(request.username)
         result = register_from_images(username, request.images_base64)
         if result["success"]:
@@ -146,6 +153,18 @@ async def authenticate():
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Serve Uploaded Files ──────────────────────────────────
+
+@app.get("/files/{username}/{filename}")
+async def get_uploaded_file(username: str, filename: str):
+    username = normalize(username)
+    filename = os.path.basename(filename)  # security: prevent path traversal
+    file_path = UPLOADS_DIR / username / filename
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
 
 
 # ── Ingest ────────────────────────────────────────────────
@@ -207,10 +226,19 @@ async def chat_stream(request: ChatRequest):
             print(f"   Retrieval: {round((time.time()-t0)*1000)}ms | "
                   f"Context: {len(context)} chars | Sources: {sources}")
 
-            # Send sources immediately
-            yield f"data: {json.dumps({'type': 'sources', 'data': sources, 'intent': decision_result['intent']})}\n\n"
+            # Extract source chunks for frontend preview
+            source_chunks = []
+            for r in retrieved.get("raw_results", []):
+                if r.get("adjusted_score", r["relevance_score"]) > 0.0:
+                    source_chunks.append({
+                        "filename": r["metadata"].get("source", "unknown"),
+                        "page": r["metadata"].get("page"),
+                        "text": r.get("text", ""),
+                        "score": round(r.get("adjusted_score", r["relevance_score"]), 3)
+                    })
 
-            # Stream LLM response
+            # Send sources immediately
+            yield f"data: {json.dumps({'type': 'sources', 'data': sources, 'chunks': source_chunks, 'intent': decision_result['intent']})}\n\n"
             history = [dict(m) for m in request.conversation_history]
             full_response = ""
 
@@ -270,8 +298,19 @@ async def chat(request: ChatRequest):
             tags=[decision_result["intent"]], session_id=str(uuid.uuid4())[:8]
         )
 
+        source_chunks = []
+        for r in retrieved.get("raw_results", []):
+            if r.get("adjusted_score", r["relevance_score"]) > 0.0:
+                source_chunks.append({
+                    "filename": r["metadata"].get("source", "unknown"),
+                    "page": r["metadata"].get("page"),
+                    "text": r.get("text", ""),
+                    "score": round(r.get("adjusted_score", r["relevance_score"]), 3)
+                })
+
         return ChatResponse(
             response=response_text, sources=sources,
+            source_chunks=source_chunks,
             intent=decision_result["intent"], interaction_id=interaction_id
         )
     except Exception as e:
