@@ -62,9 +62,9 @@ pip install -r requirements.txt
 
 # ⏱️  This takes 3-10 minutes. What's happening:
 # - face_recognition: compiles dlib from source (longest step)
-# - sentence-transformers: downloads ~90MB model
+# - sentence-transformers: downloads embedding and reranker models on first use
 # - chromadb: sets up local vector database
-# - anthropic: Claude API client
+# - google-genai and groq: LLM provider clients
 # - fastapi + uvicorn: web server
 
 # If face_recognition fails on macOS with Apple Silicon (M1/M2/M3):
@@ -74,15 +74,13 @@ pip install face_recognition --no-binary :all:
 pip install dlib --verbose
 # If still failing: sudo apt-get install libdlib-dev
 
-# ── Step 7: Set your Anthropic API key ────────────────────
-# Get your key from: https://console.anthropic.com/keys
-# Then set it as an environment variable:
+# ── Step 7: Configure LLM provider keys ──────────────────
+# Set one or both provider keys as environment variables:
 
-export ANTHROPIC_API_KEY="sk-ant-api03-YOUR-KEY-HERE"
+export GROQ_API_KEY="YOUR-GROQ-KEY"
+export GEMINI_API_KEY="YOUR-GEMINI-KEY"
 
-# To make this permanent (so you don't need to re-set every session):
-# Add the above line to your ~/.bashrc or ~/.zshrc:
-echo 'export ANTHROPIC_API_KEY="sk-ant-api03-YOUR-KEY-HERE"' >> ~/.zshrc
+# Add both provider export lines above to ~/.bashrc or ~/.zshrc to persist them.
 source ~/.zshrc
 
 
@@ -221,7 +219,7 @@ curl -X POST http://localhost:8000/ingest \
 # → Combines schedule + notes context
 
 # "Summarize my ML notes on backpropagation"
-# → Retrieves from notes, summarizes with Claude
+# → Retrieves from notes, summarizes with the configured LLM provider
 
 
 # ══════════════════════════════════════════════════════════
@@ -263,9 +261,10 @@ pip install --upgrade chromadb
 # ── Problem: "No module named 'fitz'" ─────────────────────
 pip install PyMuPDF
 
-# ── Problem: ANTHROPIC_API_KEY error ─────────────────────
-echo $ANTHROPIC_API_KEY   # Should print your key
-# If empty: export ANTHROPIC_API_KEY="sk-ant-..."
+# ── Problem: No configured LLM provider ────────────────────
+echo $GROQ_API_KEY
+echo $GEMINI_API_KEY
+# Set at least one of these keys in your environment.
 
 # ── Problem: Frontend shows "server offline" ─────────────
 # Make sure api/main.py is running in a terminal
@@ -315,7 +314,7 @@ print('Done!')
 # Terminal 1:
 cd LifeAssistant
 source venv/bin/activate
-export ANTHROPIC_API_KEY="sk-ant-..."   # (skip if in .zshrc/.bashrc)
+# Set GROQ_API_KEY and/or GEMINI_API_KEY before starting the server.
 python api/main.py
 
 # Then open frontend/index.html in your browser.

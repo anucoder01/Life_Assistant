@@ -25,8 +25,10 @@ Compared to standard chatbot interfaces (like ChatGPT, standard Claude) or exist
 - 🔐 **Biometric Security:** One-time face registration ensures only you can interact with your assistant.
 - 📚 **Multi-Format Ingestion:** Seamlessly parse and load PDFs, text notes, and schedule formats.
 - 🧠 **Retrieval-Augmented Generation (RAG):** Answers are grounded in *your* documents. It doesn't hallucinate; it reads your notes before speaking.
+- 🧠 **Neural Retrieval Improvements:** A local cross-encoder reranks candidate document chunks, while the sentence-transformer routes requests by semantic intent.
+- 🔁 **LLM Provider Failover:** Configure Groq and Gemini credentials; the assistant tries configured providers in order and falls back when a request fails.
 - 💾 **Persistent SQLite Memory:** Remembers past Q&A pairs to provide highly contextual follow-up answers across different days and sessions.
-- 🤖 **Claude-Powered Generation:** Leverages the advanced reasoning capabilities of the Claude API for the final answer generation.
+- 🤖 **LLM-Powered Generation:** Uses Groq with Gemini as a configurable fallback provider.
 - 🌐 **Modern Web UI:** A clean, easy-to-use frontend (HTML/JS) interacting with a robust FastAPI backend.
 
 ---
@@ -44,9 +46,9 @@ LifeAssistant operates on a sophisticated pipeline to ensure speed, accuracy, an
         ↓
 [Local Vector DB: ChromaDB]
         ↓
-[User Query] → [Retriever] → [Top-K Relevant Chunks]
+[User Query] → [Retriever] → [Cross-Encoder Reranker] → [Top-K Relevant Chunks]
                                 ↓
-                    [LLM: Claude API] → [Response]
+                    [LLM: Groq → Gemini fallback] → [Response]
                                 ↑
                     [Long-Term Memory: SQLite]
 ```
@@ -72,7 +74,7 @@ LifeAssistant/
 ├── memory/
 │   └── long_term_memory.py  # SQLite: store past Q&A pairs
 ├── llm/
-│   └── generator.py         # Claude API call with context
+│   └── generator.py         # Multi-provider LLM generation with fallback
 ├── decision/
 │   └── decision_support.py  # Study/task/routine planning layer
 ├── api/
@@ -98,7 +100,11 @@ LifeAssistant/
    pip install -r requirements.txt
    ```
 2. **Configuration:**
-   Set up your Claude API key and other local paths in `config.py`.
+   Set one or both provider keys in your environment. If both are set, Groq is tried first and Gemini is used after a Groq failure. Set `LLM_PROVIDERS=gemini,groq` to reverse the order. The model names can be overridden with `GROQ_MODEL` and `GEMINI_MODEL`.
+   ```bash
+   export GROQ_API_KEY="..."
+   export GEMINI_API_KEY="..."
+   ```
 3. **Register Your Face:**
    Run `python face_auth/register_face.py` to securely store your facial encoding locally.
 4. **Ingest Data:**
@@ -116,7 +122,8 @@ LifeAssistant/
 - **Backend API:** FastAPI (Python)
 - **Vector Database:** ChromaDB (Local)
 - **Embeddings:** Sentence-Transformers (HuggingFace)
-- **LLM API:** Anthropic Claude API
+- **LLM APIs:** Groq with Gemini failover
+- **Reranking:** Local Sentence-Transformers cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`)
 - **Biometrics:** OpenCV & face_recognition
 - **Memory Storage:** SQLite
 - **Frontend:** HTML, CSS, Vanilla JavaScript

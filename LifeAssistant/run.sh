@@ -15,20 +15,19 @@ echo ""
 echo "🧠 Life Assistant — Starting Up"
 echo "================================"
 
-# Check API key
-if [ -z "$ANTHROPIC_API_KEY" ]; then
+# Check that at least one configured provider has a key
+if [ -z "$GROQ_API_KEY" ] && [ -z "$GEMINI_API_KEY" ]; then
   echo ""
-  echo "❌ ERROR: ANTHROPIC_API_KEY is not set!"
+  echo "❌ ERROR: No LLM provider key is set!"
   echo ""
-  echo "   Get your key from: https://console.anthropic.com"
-  echo "   Then run:"
-  echo "   export ANTHROPIC_API_KEY='sk-ant-...'"
+  echo "   Set GROQ_API_KEY and/or GEMINI_API_KEY before starting."
+  echo "   For example: export GROQ_API_KEY='...'"
   echo "   ./run.sh"
   echo ""
   exit 1
 fi
 
-echo "✅ API key found"
+echo "✅ LLM provider key found"
 echo ""
 
 # Start API server
