@@ -7,10 +7,42 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from typing import List, Dict
 from embeddings.vector_store import VectorStore
 from memory.long_term_memory import MemoryStore
-from config import TOP_K_RESULTS
+from config import TOP_K_RESULTS, RERANK_CANDIDATE_MULTIPLIER, RERANKER_MODEL
 import time
 import datetime
 import re
+import threading
+import math
+
+
+class CrossEncoderReranker:
+    """Locally rerank vector-search candidates with a pretrained cross-encoder."""
+
+    _instance = None
+    _lock = threading.Lock()
+
+    def __init__(self):
+        from sentence_transformers import CrossEncoder
+        self.model = CrossEncoder(RERANKER_MODEL)
+
+    @classmethod
+    def get(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = cls()
+        return cls._instance
+
+    def scores(self, query: str, results: list) -> list:
+        pairs = [(query, item.get("text", "")) for item in results]
+        raw_scores = self.model.predict(pairs, show_progress_bar=False)
+        scores = []
+        for raw in raw_scores:
+            value = float(raw)
+            # MS MARCO CrossEncoder emits logits; map them to [0, 1].
+            value = max(-50.0, min(50.0, value))
+            scores.append(1.0 / (1.0 + math.exp(-value)))
+        return scores
 
 
 def extract_date_from_query(query: str) -> str:
@@ -62,8 +94,20 @@ class Retriever:
         """
         t0 = time.time()
 
-        # 1. Vector store search
-        doc_results = self.vector_store.query(query, top_k=top_k)
+        # Fetch a wider candidate set, then use the cross-encoder to score the
+        # query and each chunk together. Keep vector search as a fallback.
+        candidate_k = max(top_k, top_k * RERANK_CANDIDATE_MULTIPLIER)
+        doc_results = self.vector_store.query(query, top_k=candidate_k)
+        try:
+            if doc_results:
+                neural_scores = CrossEncoderReranker.get().scores(query, doc_results)
+                for result, neural_score in zip(doc_results, neural_scores):
+                    result["reranker_score"] = neural_score
+                    result["relevance_score"] = (
+                        0.75 * neural_score + 0.25 * result["relevance_score"]
+                    )
+        except Exception as exc:
+            print(f"Cross-encoder reranker unavailable; using vector ranking: {exc}")
 
         # 2. Memory search
         memory_results = self.memory_store.get_relevant_memories(
@@ -113,6 +157,7 @@ class Retriever:
             
         # Re-sort results by adjusted score
         reranked_results.sort(key=lambda x: x["adjusted_score"], reverse=True)
+        reranked_results = reranked_results[:top_k]
 
         # 3. Format document context
         doc_context_parts = []

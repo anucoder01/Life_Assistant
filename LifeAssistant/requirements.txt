@@ -18,13 +18,14 @@ opencv-python==4.9.0.80          # Webcam access + image processing
 
 # ── Embedding Model ───────────────────────────────────────
 # Runs locally, no API needed
-sentence-transformers==2.7.0
+sentence-transformers==2.7.0       # Embeddings, semantic intent routing, cross-encoder reranking
 
 # ── Vector Database ───────────────────────────────────────
 chromadb==0.5.0                  # Local persistent vector DB
 
 # ── LLM API ───────────────────────────────────────────────
-google-generativeai==0.7.2          # Free Gemini API
+google-genai>=1.0.0,<2.0.0          # Gemini fallback API (current Google SDK)
+groq>=0.9.0,<1.0.0                  # Primary Groq API
 
 # ── PDF Processing ────────────────────────────────────────
 PyMuPDF==1.24.2                  # fitz - fast PDF text extraction
