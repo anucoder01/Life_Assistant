@@ -9,7 +9,14 @@ BASE_DIR = Path(__file__).parent
 # Windows: $env:GROQ_API_KEY="gsk_..."
 # Mac/Linux: export GROQ_API_KEY="gsk_..."
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-LLM_MODEL = "llama-3.3-70b-versatile"   # Free, fast, very capable
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+# Providers are attempted in this order; unavailable providers are skipped.
+LLM_PROVIDERS = [p.strip().lower() for p in os.getenv(
+    "LLM_PROVIDERS", "groq,gemini"
+).split(",") if p.strip()]
+LLM_MODEL = GROQ_MODEL  # Backwards compatibility for existing imports.
 LLM_MAX_TOKENS = 1500
 
 # ── Embedding Model ───────────────────────────────────────
@@ -34,6 +41,11 @@ CHUNK_OVERLAP = 50
 
 # ── Retrieval ─────────────────────────────────────────────
 TOP_K_RESULTS = 5
+RERANK_CANDIDATE_MULTIPLIER = 3
+RERANKER_MODEL = os.getenv(
+    "RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"
+)
+INTENT_CLASSIFIER_THRESHOLD = float(os.getenv("INTENT_CLASSIFIER_THRESHOLD", "0.38"))
 
 # ── API Server ────────────────────────────────────────────
 API_HOST = "0.0.0.0"
